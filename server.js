@@ -30,6 +30,16 @@ const app = express()
 app.use(cors())
 app.use(bodyParser.json())
 
+const authenticateUser = async (req, res, next) => {
+  const user = await User.findOne({ accessToken: req.header('Authorization') })
+  if (user) {
+    req.user = user
+    next()
+  } else {
+    res.status(401).json({ loggedOut: true })
+  }
+}
+
 app.get('/', (req, res) =>
   res.send('Hello World')
 )
@@ -46,13 +56,18 @@ app.post('/users', async (req, res) => {
   }
 })
 
-app.get('/users', async (req, res) => {
-  const user = await User.find()
-  res.json(user)
+app.post('/sessions', async (req, res) => {
+  const user = await User.findOne({ name: req.body.name })
+  if (user && bcrypt.compareSync(req.body.password, user.password)) {
+    res.json({ userId: user._id, accessToken: user.accessToken })
+  } else {
+    res.json({ notFound: true })
+  }
 })
 
-app.get('/secrets', (req, res) => {
-  res.json({ secret: 'Oh so secret!' })
+app.get('/testingauths', authenticateUser)
+app.get('/testingauths', (req, res) => {
+  res.json({ test: 'Testing Authorisation' })
 })
 
 app.listen(port, () => console.log(`Server running on http://localhost:${port}`))
