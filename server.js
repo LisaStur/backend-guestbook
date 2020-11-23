@@ -23,12 +23,40 @@ const User = mongoose.model('User', {
     default: () => crypto.randomBytes(128).toString('hex')
   }
 })
+const Message = mongoose.model('Message', {
+  text: {
+    type: String,
+    requiered: true,
+    minlength: 5,
+    maxlength: 200
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  like: {
+    type: Number,
+    default: 0
+  }
+})
 
 const port = process.env.PORT || 8080
 const app = express()
 
 app.use(cors())
 app.use(bodyParser.json())
+
+app.use((req, res, next) => {
+  if (mongoose.connection.readyState === 1) {
+    next()
+  } else {
+    res.status(503).json({ error: 'Service unavaiable' })
+  }
+})
 
 const authenticateUser = async (req, res, next) => {
   const user = await User.findOne({ accessToken: req.header('Authorization') })
@@ -41,7 +69,7 @@ const authenticateUser = async (req, res, next) => {
 }
 
 app.get('/', (req, res) =>
-  res.send('Hello World')
+  res.send('Lisas Guestbook')
 )
 
 app.post('/users', async (req, res) => {
@@ -57,12 +85,33 @@ app.post('/users', async (req, res) => {
 })
 
 app.post('/sessions', async (req, res) => {
-  const user = await User.findOne({ name: req.body.name })
-  if (user && bcrypt.compareSync(req.body.password, user.password)) {
-    res.json({ userId: user._id, accessToken: user.accessToken })
-  } else {
-    res.json({ notFound: true })
+  try {
+    const { name, password } = req.body
+    const user = await User.findOne({ name })
+    if (user && bcrypt.compareSync(password, user.password)) {
+      res.status(201).json({ id: user._id, accessToken: user.accessToken })
+    } else {
+      res.status(404).json({ notFound: true })
+    }
+  } catch (err) {
+    res.status(404).json({ notFound: true })
   }
+})
+
+app.post('/messages', authenticateUser)
+app.post('/messages', async (req, res) => {
+  try {
+    const { text } = req.body
+    const message = await new Message({ text, author: req.user._id }).save()
+    res.status(201).json(message)
+  } catch (err) {
+    res.status(400).json({ message: 'Could not save message', errors: err.errors })
+  }
+})
+
+app.get('/messages', async (req, res) => {
+  const messages = await Message.find().populate('author', 'name').sort({ createdAt: 'desc' }).limit(2).exec()
+  res.json(messages)
 })
 
 app.get('/testingauths', authenticateUser)
