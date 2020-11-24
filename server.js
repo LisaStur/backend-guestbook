@@ -23,6 +23,7 @@ const User = mongoose.model('User', {
     default: () => crypto.randomBytes(128).toString('hex')
   }
 })
+
 const Message = mongoose.model('Message', {
   text: {
     type: String,
@@ -50,21 +51,26 @@ const app = express()
 app.use(cors())
 app.use(bodyParser.json())
 
+/*
 app.use((req, res, next) => {
   if (mongoose.connection.readyState === 1) {
     next()
   } else {
     res.status(503).json({ error: 'Service unavaiable' })
   }
-})
+}) */
 
 const authenticateUser = async (req, res, next) => {
-  const user = await User.findOne({ accessToken: req.header('Authorization') })
-  if (user) {
-    req.user = user
-    next()
-  } else {
-    res.status(401).json({ loggedOut: true })
+  try {
+    const user = await User.findOne({ accessToken: req.header('Authorization') })
+    if (user) {
+      req.user = user
+      next()
+    } else {
+      res.status(401).json({ loggedOut: true })
+    }
+  } catch (err) {
+    res.stauts(403).json({ message: 'Access token missing or wrong' })
   }
 }
 
@@ -72,24 +78,31 @@ app.get('/', (req, res) =>
   res.send('Lisas Guestbook')
 )
 
+// Create user
 app.post('/users', async (req, res) => {
   try {
     const { name, password } = req.body
     const rounds = 5
     const user = new User({ name: name, password: bcrypt.hashSync(password, rounds) })
     await user.save()
-    res.status(201).json({ id: user._id, accessToken: user.accessToken })
+    res.status(201).json({ userId: user._id, accessToken: user.accessToken })
   } catch (err) {
     res.status(400).json({ message: 'Could not create user', errors: err.errors })
   }
 })
 
+app.get('/users', async (req, res) => {
+  const users = await User.find()
+  res.json(users)
+})
+
+// Login user
 app.post('/sessions', async (req, res) => {
   try {
     const { name, password } = req.body
     const user = await User.findOne({ name })
     if (user && bcrypt.compareSync(password, user.password)) {
-      res.status(201).json({ id: user._id, accessToken: user.accessToken })
+      res.status(201).json({ userId: user._id, accessToken: user.accessToken })
     } else {
       res.status(404).json({ notFound: true })
     }
@@ -109,8 +122,9 @@ app.post('/messages', async (req, res) => {
   }
 })
 
+// app.get('/messages', authenticateUser)
 app.get('/messages', async (req, res) => {
-  const messages = await Message.find().populate('author', 'name').sort({ createdAt: 'desc' }).limit(2).exec()
+  const messages = await Message.find().populate('author', 'name').sort({ createdAt: 'desc' }).limit(5).exec()
   res.json(messages)
 })
 
