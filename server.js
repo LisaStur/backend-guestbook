@@ -128,6 +128,16 @@ app.get('/messages', async (req, res) => {
   res.json(messages)
 })
 
+app.put('/messages/:messageId/like', async (req, res) => {
+  try {
+    const { messageId } = req.params
+    const message = await Message.findOneAndUpdate({ _id: messageId }, { $inc: { like: 1 } })
+    res.status(201).json(message)
+  } catch (err) {
+    res.status(400).json({ message: 'Could not like post, not found', error: err.errors })
+  }
+})
+
 app.get('/testingauths', authenticateUser)
 app.get('/testingauths', (req, res) => {
   res.json({ test: 'Testing Authorisation' })
