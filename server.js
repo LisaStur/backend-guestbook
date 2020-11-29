@@ -138,6 +138,27 @@ app.put('/messages/:messageId/like', async (req, res) => {
   }
 })
 
+app.put('/messages/:messageId/update', async (req, res) => {
+  try {
+    const { messageId } = req.params
+    const { text } = req.body
+    const newMessage = await Message.findOneAndUpdate({ _id: messageId }, { text })
+    res.status(201).json(newMessage)
+  } catch (err) {
+    res.status(400).json({ message: 'Could not update post, not found', error: err.errors })
+  }
+})
+
+app.delete('/messages/:messageId', async (req, res) => {
+  try {
+    const { messageId } = req.params
+    const message = await Message.findOneAndDelete({ _id: messageId })
+    res.status(200).json(message)
+  } catch (err) {
+    res.status(400).json({ message: 'Could not delete post, not found', error: err.errors })
+  }
+})
+
 app.get('/testingauths', authenticateUser)
 app.get('/testingauths', (req, res) => {
   res.json({ test: 'Testing Authorisation' })
