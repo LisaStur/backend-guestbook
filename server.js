@@ -12,11 +12,14 @@ mongoose.Promies = Promise
 const User = mongoose.model('User', {
   name: {
     type: String,
-    unique: true
+    unique: true,
+    required: true,
+    minlength: 3
   },
   password: {
     type: String,
-    required: true
+    required: true,
+    minlength: 3
   },
   accessToken: {
     type: String,
@@ -94,6 +97,15 @@ app.post('/users', async (req, res) => {
 app.get('/users', async (req, res) => {
   const users = await User.find()
   res.json(users)
+})
+app.delete('/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const user = await User.findOneAndDelete({ _id: userId })
+    res.status(200).json(user)
+  } catch (err) {
+    res.status(400).json({ message: 'Could not delete post, not found', error: err.errors })
+  }
 })
 
 // Login user
