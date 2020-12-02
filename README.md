@@ -4,5 +4,5 @@
 <p>Node.js, Express, MongoDB and Mongoose. Dpeloyed at Heroku.</p>
 <h2>Frontend</h2>
 View it live: https://lisas-guestbook.netlify.app<br/>
-Please allow a few moments for the backend to wake up.
+Please allow a few moments for the backend to wake up.<br/>
 GitHub: https://github.com/LisaStur/guestbook-frontend
